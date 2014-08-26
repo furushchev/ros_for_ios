@@ -12,8 +12,7 @@ ROS_BRANCH=groovy-devel
 echo "Installing CMake iOS toolchain ..."
 if [ ! -d ios-cmake ]
     then
-    curl https://ios-cmake.googlecode.com/files/ios-cmake.tar.gz -o ./ios-cmake.tar.gz
-    tar xvzf ios-cmake.tar.gz
+    hg clone https://code.google.com/p/ios-cmake/
 fi
 
 #===============================================================================
