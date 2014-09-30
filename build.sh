@@ -131,14 +131,14 @@ echo "Ok"
 #===============================================================================
 #ROS image_transport
 
-echo "Building image_transport (user password required) :"
+# echo "Building image_transport (user password required) :"
 
-if (cd $SRCDIR/ros; sh build_image_transport.sh) >> $LOGFILE 2>&1;
-    then
-        echo "Ok"
-else
-    error_exit "Error ! Aborting."
-fi
+# if (cd $SRCDIR/ros; sh build_image_transport.sh) >> $LOGFILE 2>&1;
+#     then
+#         echo "Ok"
+# else
+#     error_exit "Error ! Aborting."
+# fi
 
 #===============================================================================
 
