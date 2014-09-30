@@ -12,7 +12,8 @@ ROS_BRANCH=groovy-devel
 echo "Installing CMake iOS toolchain ..."
 if [ ! -d ios-cmake ]
     then
-    hg clone https://code.google.com/p/ios-cmake/
+#    hg clone https://code.google.com/p/ios-cmake/
+    git clone https://github.com/furushchev/ios-cmake.git
 fi
 
 #===============================================================================
@@ -67,6 +68,7 @@ patch -N $SRCDIR/ros/core/roslib/src/package.cpp $SRCDIR/patches/package.patch
 patch -N $SRCDIR/roscpp_core/roscpp_traits/include/ros/message_forward.h $SRCDIR/patches/message_forward.patch
 patch -N $SRCDIR/ros_comm/utilities/xmlrpcpp/include/base64.h $SRCDIR/patches/base64.patch
 patch -N $SRCDIR/ros_comm/clients/roscpp/include/ros/node_handle.h $SRCDIR/patches/node_handle.patch
+patch -N $SRCDIR/ros_comm/clients/roscpp/src/libros/timer.cpp $SRCDIR/patches/timer.patch
 
 #===============================================================================
 echo "Generating ROS messages ..."
@@ -175,7 +177,7 @@ cd $OS_BUILDDIR
 
 cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode ..
 
-if (! xcodebuild -configuration Release -target ALL_BUILD)
+if (! xcodebuild -sdk iphoneos -configuration Release -target ALL_BUILD)
     then
         exit 1
 fi
@@ -184,7 +186,7 @@ cd $SIMULATOR_BUILDDIR
 
 cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode ..
 
-if (! xcodebuild -configuration Release -target ALL_BUILD)
+if (! xcodebuild -sdk iphonesimulator -configuration Release -target ALL_BUILD)
     then
         exit 1
 fi
@@ -199,7 +201,8 @@ echo "Splitting all existing fat binaries..."
 
 for f in $OS_BUILDDIR/Release-iphoneos/*.a
     do
-        lipo "$f" -thin armv7 -o $OS_BUILDDIR/armv7/$(basename "$f")
+#    lipo "$f" -thin armv7 -o $OS_BUILDDIR/armv7/$(basename "$f")
+    cp "$f" $OS_BUILDDIR/armv7/$(basename "$f")
 done
 
 cp $SIMULATOR_BUILDDIR/Release-iphonesimulator/*.a $SIMULATOR_BUILDDIR/i386/
@@ -255,6 +258,7 @@ FRAMEWORK_INSTALL_NAME=$FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/$FRAMEWORK_
 
 echo "Lipoing library into $FRAMEWORK_INSTALL_NAME..."
 lipo -create $OS_BUILDDIR/armv7/lib$FRAMEWORK_NAME.a $SIMULATOR_BUILDDIR/i386/lib$FRAMEWORK_NAME.a -o $FRAMEWORK_INSTALL_NAME
+#cp $OS_BUILDDIR/armv7/lib$FRAMEWORK_NAME.a $FRAMEWORK_INSTALL_NAME
 
 echo "Framework: Copying includes..."
 

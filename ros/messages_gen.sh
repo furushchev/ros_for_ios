@@ -20,7 +20,8 @@ fi
 echo "Installing CMake iOS toolchain ..."
 if [ ! -d ios-cmake ]
     then
-    hg clone https://code.google.com/p/ios-cmake/
+#    hg clone https://code.google.com/p/ios-cmake/
+    git clone https://github.com/furushchev/ios-cmake.git
 fi
 
 #===============================================================================
@@ -156,15 +157,18 @@ mkdir $SIMULATOR_BUILDDIR
 
 cd $OS_BUILDDIR
 
-cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode ..
+cmake -DCMAKE_TOOLCHAIN_FILE=$SRCDIR/ios-cmake/toolchain/iOS.cmake -GXcode ..
 
-xcodebuild -sdk iphoneos -configuration Release -target ALL_BUILD
+BOOSTFRAMEWORK=$SRCDIR/../boostonios/ios/framework/boost # .framework
+OLDFLAGS="${inherited} -framework $BOOSTFRAMEWORK"
+
+xcodebuild -sdk iphoneos -configuration Release -target ALL_BUILD #OTHER_LDFLAGS=$OLDFLAGS
 
 cd $SIMULATOR_BUILDDIR
 
-cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode ..
+cmake -DCMAKE_TOOLCHAIN_FILE=$SRCDIR/ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode ..
 
-xcodebuild -sdk iphonesimulator -configuration Release -target ALL_BUILD
+xcodebuild -sdk iphonesimulator -configuration Release -target ALL_BUILD #OTHER_LDFLAGS=$OLDFLAGS
 
 #===============================================================================
 cd $SRCDIR

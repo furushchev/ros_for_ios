@@ -11,7 +11,8 @@ PACKAGE_NAME=`basename $1`
 echo "Installing CMake iOS toolchain ..."
 if [ ! -d ios-cmake ]
     then
-    hg clone https://code.google.com/p/ios-cmake/
+#    hg clone https://code.google.com/p/ios-cmake/
+    git clone https://github.com/furushchev/ios-cmake.git
 fi
 
 #===============================================================================
