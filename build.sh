@@ -44,7 +44,6 @@ fi
 
 buildBoost()
 {
-(
 if (sh $SRCDIR/buildBoost.sh) >> $LOGFILE 2>&1;
     then
     echo "OK!"
