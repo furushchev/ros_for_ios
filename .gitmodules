@@ -1,3 +1,6 @@
 [submodule "boost"]
 	path = boost
 	url = https://github.com/danoli3/ofxiOSBoost.git
+[submodule "mod-pbxproj"]
+	path = mod_pbxproj
+	url = https://github.com/furushchev/mod-pbxproj.git
