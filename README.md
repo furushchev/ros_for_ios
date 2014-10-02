@@ -9,7 +9,7 @@ ros-ios
 sh build.sh
 ```
 
-1. create your xcode project
+2. create your xcode project
 
 Open xcode, create your own project, then save it to this top directory.
 
@@ -24,13 +24,15 @@ After creating the project named `hogeApp`, directory tree is like below:
  |- ros/
 ```
 
-1. apply ros to your project
+3. apply ros to your project
 
 ```
 sh new-app.sh
 ```
 
-1. Have a fun!
+4. Have a fun!
+
+You can build your app at xcode.
 
 ## How to generate own ros package to framework
 
