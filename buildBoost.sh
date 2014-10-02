@@ -1,7 +1,7 @@
 SRCDIR=`pwd`
 LOGFILE=$SRCDIR/log.txt
 
-if [ -d $SRCDIR/boost ]
+if [ -d $SRCDIR/boost/libs/boost ]
     then
     git submodule foreach git clean -df
 else
@@ -9,7 +9,7 @@ else
 fi
 
 BOOST_ROOT=$SRCDIR/boost/libs/boost
-BOOST_LIBS=$BOOST_ROOT/lib
+BOOST_LIBS=$BOOST_ROOT/ios
 BOOST_INCLUDE=$BOOST_ROOT/include/boost
 
 unifyBoost()
@@ -26,16 +26,6 @@ unifyBoost()
     ar crus $BOOST_LIBS/libboost-$ARCH.a obj/*.o
     popd
 }
-
-if [ ! -e $BOOST_LIBS/libboost.a ]; then
-    if [ ! -e $BOOST_LIBS/libboost-armv7 ]; then
-        unifyBoost armv7
-    fi
-    if [ ! -e $BOOST_LIBS/libboost-i386 ]; then
-        unifyBoost i386
-    fi
-    lipo -create $BOOST_LIBS/libboost-armv7.a $BOOST_LIBS/libboost-i386.a -output $BOOST_LIBS/libboost.a
-fi
 
 makeInfoPlist()
 {
@@ -65,17 +55,18 @@ EOF
 
 makeFramework()
 {
-    A=$SRCDIR/boost.framework/Version/A
+    A=$SRCDIR/boost.framework/Versions/A
     if [ -d $SRCDIR/boost.framework ]; then
         rm -rf $SRCDIR/boost.framework
     fi
     mkdir -p $A/Documentation $A/Headers $A/Resources
-    cp $BOOST_LIBS/libboost.a $A/boost
-    cp -R $BOOST_INCLUDE $A/Headers
+    cp $BOOST_LIBS/boost.a $A/boost
+    cp -R $BOOST_INCLUDE/* $A/Headers
     makeInfoPlist $A/Resources
     (cd $A/..; ln -s A Current)
     (cd $SRCDIR/boost.framework; ln -s Versions/Current/Documentation Documentation )
     (cd $SRCDIR/boost.framework; ln -s Versions/Current/Headers Headers )
     (cd $SRCDIR/boost.framework; ln -s Versions/Current/Resources Resources )
+    (cd $SRCDIR/boost.framework; ln -s Versions/Current/boost boost )
 }
 makeFramework

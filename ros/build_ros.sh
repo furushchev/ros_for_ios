@@ -69,6 +69,7 @@ patch -N $SRCDIR/roscpp_core/roscpp_traits/include/ros/message_forward.h $SRCDIR
 patch -N $SRCDIR/ros_comm/utilities/xmlrpcpp/include/base64.h $SRCDIR/patches/base64.patch
 patch -N $SRCDIR/ros_comm/clients/roscpp/include/ros/node_handle.h $SRCDIR/patches/node_handle.patch
 patch -N $SRCDIR/ros_comm/clients/roscpp/src/libros/timer.cpp $SRCDIR/patches/timer.patch
+patch -N $SRCDIR/ros_comm/clients/roscpp/src/libros/wall_timer.cpp $SRCDIR/patches/wall_timer.patch
 
 #===============================================================================
 echo "Generating ROS messages ..."
