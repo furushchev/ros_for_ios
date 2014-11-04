@@ -59,6 +59,7 @@ patch -N $SRCDIR/$APR_UTIL/xml/expat/expat_config.h $SRCDIR/patches/expat_config
 patch -N $SRCDIR/$APR_UTIL/xml/expat/lib/xmlparse.c $SRCDIR/patches/xmlparse.patch
 patch -N $SRCDIR/$LOG4CXX/src/main/include/log4cxx/helpers/simpledateformat.h $SRCDIR/patches/simpledateformat.patch
 patch -N $SRCDIR/$LOG4CXX/src/main/cpp/stringhelper.cpp $SRCDIR/patches/stringhelper.patch
+patch -N $SRCDIR/$APR/file_io/unix/readwrite.c $SRCDIR/patches/readwrite.c.patch
 
 #===============================================================================
 echo "Generating CMakeLists.txt ..."
@@ -101,23 +102,35 @@ echo "Building ..."
 
 mkdir $OS_BUILDDIR
 mkdir $SIMULATOR_BUILDDIR
+IOS32=`mktemp -d $OS_BUILDDIR/ios32.XXXXXX`
+IOS64=`mktemp -d $OS_BUILDDIR/ios64.XXXXXX`
+SIM32=`mktemp -d $OS_BUILDDIR/sim32.XXXXXX`
+SIM64=`mktemp -d $OS_BUILDDIR/sim64.XXXXXX`
+ARCHS_IOS_32BIT="armv7 armv7s"
+ARCHS_IOS_64BIT="armv7 armv7s arm64"
+ARCHS_SIM_32BIT="i386"
+ARCHS_SIM_64BIT="x86_64 i386"
 
 cd $OS_BUILDDIR
 
 cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode ..
 
-if (! xcodebuild -configuration Release -target ALL_BUILD)
+# for ios
+if (! xcodebuild -configuration Release -target ALL_BUILD -sdk iphoneos ARCHS="${ARCHS_IOS_64BIT}" ONLY_ACTIVE_ARCH=NO TARGET_BUILD_DIR="${SRCDIR}/${IOS64}")
     then
         exit 1
 fi
+
 cd $SIMULATOR_BUILDDIR
 
 cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode ..
 
-if (! xcodebuild -configuration Release -target ALL_BUILD)
+# for sim
+if (! xcodebuild -configuration Release -target ALL_BUILD -sdk iphonesimulator ARCHS="${ARCHS_SIM_64BIT}" ONLY_ACTIVE_ARCH=NO TARGET_BUILD_DIR="${SRCDIR}/${SIM64}")
     then
         exit 1
 fi
+
 #===============================================================================
 cd $SRCDIR
 
