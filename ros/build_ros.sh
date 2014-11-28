@@ -168,119 +168,197 @@ done
 #===============================================================================
 echo "Building ..."
 
-[ -d $OS_BUILDDIR ] && rm -rf $OS_BUILDDIR
-[ -d $SIMULATOR_BUILDDIR ] && rm -rf $SIMULATOR_BUILDDIR
+ARCHS_IOS_32BIT="armv7 armv7s"
+ARCHS_IOS_64BIT="armv7 armv7s arm64"
+ARCHS_SIM_32BIT="i386"
+ARCHS_SIM_64BIT="i386 x86_64"
 
-mkdir $OS_BUILDDIR
-mkdir $SIMULATOR_BUILDDIR
+IOS_32BIT_DIR=`mktemp -d /tmp/ios32.XXXXXX`
+IOS_64BIT_DIR=`mktemp -d /tmp/ios64.XXXXXX`
+SIM_32BIT_DIR=`mktemp -d /tmp/sim32.XXXXXX`
+SIM_64BIT_DIR=`mktemp -d /tmp/sim64.XXXXXX`
 
-cd $OS_BUILDDIR
-
-cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode ..
-
-if (! xcodebuild -sdk iphoneos -configuration Release -target ALL_BUILD)
+# -- build for ios --
+IOS_ARCH_NAMES="IOS_32BIT IOS_64BIT"
+for ARCH_NAME in ${IOS_ARCH_NAMES}; do
+    ARCHS=`eval echo '$ARCHS_'$ARCH_NAME`
+    BUILDDIR=`eval echo $ARCH_NAME'_DIR'`
+    cd $BUILDDIR
+    cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode $SRCDIR
+    if (! xcodebuild -sdk iphoneos\
+          -configuration Release\
+          -target ALL_BUILD\
+          ARCHS="$ARCHS"\
+          ONLY_ACTIVE_ARCH=NO\
+          clean build\
+          TARGET_BUILD_DIR="$BUILDDIR")
     then
         exit 1
-fi
+    fi
 
-cd $SIMULATOR_BUILDDIR
+    # divide into each archs
+    for ARCH in ${ARCHS}; do
+        OBJDIR="$BUILDDIR/obj/$ARCH"
+        mkdir -p $OBJDIR
+        for f in $BUILDDIR/*.a; do
+            lipo "$f" -thin $ARCH -o $OBJDIR/$(basename "$f")
+        done
+        # extract .a -> .o
+        for f in $OBJDIR/*.a; do
+            (cd $OBJDIR; ar -x $f )
+        done
+        # archive all .o -> libros.a
+        (cd $BUILDDIR; ar crus libros.a $OBJDIR/*.o )
+    done
+done
 
-cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode ..
+# (cd $OS_BUILDDIR/armv7/; ar crus libros.a obj/*.o; )
+# (cd $SIMULATOR_BUILDDIR/i386/; ar crus libros.a obj/*.o; )
 
-if (! xcodebuild -sdk iphonesimulator -configuration Release -target ALL_BUILD)
+
+# -- build for ios-sim --
+SIM_ARCH_NAMES="SIM_32BIT SIM_64BIT"
+for ARCH_NAME in ${SIM_ARCH_NAMES}; do
+    ARCHS=`eval echo '$ARCHS_'$ARCH_NAME`
+    BUILDDIR=`eval echo $ARCH_NAME'_DIR'`
+    cd $BUILDDIR
+    cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode $SRCDIR
+    if (! xcodebuild -sdk iphonesimulator\
+          -configuration Release\
+          -target ALL_BUILD\
+          ARCHS="$ARCHS"\
+          ONLY_ACTIVE_ARCH=NO\
+          clean build\
+          TARGET_BUILD_DIR="$BUILDDIR")
     then
         exit 1
-fi
+    fi
+
+    # divide into each archs
+    for ARCH in ${ARCHS}; do
+        OBJDIR="$BUILDDIR/obj/$ARCH"
+        mkdir -p $OBJDIR
+        for f in $BUILDDIR/*.a; do
+            lipo "$f" -thin $ARCH -o $OBJDIR/$(basename "$f")
+        done
+        # extract .a -> .o
+        for f in $OBJDIR/*.a; do
+            (cd $OBJDIR; ar -x $f)
+        done
+        # archive all .o -> libros.a
+        (cd $BUILDDIR; ar crus libros.a $OBJDIR/*.o )
+    done
+done
+
+# -- make library
+lipo $IOS_32BIT_DIR/libros.a $SIM_32BIT_DIR/libros.a -create -output $SRCDIR/libros-32bit.a
+lipo $IOS_64BIT_DIR/libros.a $SIM_64BIT_DIR/libros.a -create -output $SRCDIR/libros-64bit.a
+
+# cd $SIMULATOR_BUILDDIR
+
+# cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode ..
+
+# if (! xcodebuild -sdk iphonesimulator -configuration Release -target ALL_BUIL )
+#     then
+#         exit 1
+# fi
 
 #===============================================================================
-echo "Scrunch all libs together in one lib per platform ..."
+# echo "Scrunch all libs together in one lib per platform ..."
 
-mkdir -p $OS_BUILDDIR/armv7/obj
-mkdir -p $SIMULATOR_BUILDDIR/i386/obj
+# mkdir -p $OS_BUILDDIR/armv7/obj
+# mkdir -p $SIMULATOR_BUILDDIR/i386/obj
 
-echo "Splitting all existing fat binaries..."
+# echo "Splitting all existing fat binaries..."
 
-for f in $OS_BUILDDIR/Release-iphoneos/*.a
-    do
-#    lipo "$f" -thin armv7 -o $OS_BUILDDIR/armv7/$(basename "$f")
-    cp "$f" $OS_BUILDDIR/armv7/$(basename "$f")
-done
+# for f in $OS_BUILDDIR/Release-iphoneos/*.a
+#     do
+# #    lipo "$f" -thin armv7 -o $OS_BUILDDIR/armv7/$(basename "$f")
+#     cp "$f" $OS_BUILDDIR/armv7/$(basename "$f")
+# done
 
-cp $SIMULATOR_BUILDDIR/Release-iphonesimulator/*.a $SIMULATOR_BUILDDIR/i386/
+# cp $SIMULATOR_BUILDDIR/Release-iphonesimulator/*.a $SIMULATOR_BUILDDIR/i386/
 
-echo "Decomposing each architecture's .a files"
+# echo "Decomposing each architecture's .a files"
 
-for f in $OS_BUILDDIR/armv7/*.a
-    do
-        (cd $OS_BUILDDIR/armv7/obj; ar -x $f);
-done
+# for f in $OS_BUILDDIR/armv7/*.a
+#     do
+#         (cd $OS_BUILDDIR/armv7/obj; ar -x $f);
+# done
 
-for f in $SIMULATOR_BUILDDIR/i386/*.a
-    do
-        (cd $SIMULATOR_BUILDDIR/i386/obj; ar -x $f);
-done
+# for f in $SIMULATOR_BUILDDIR/i386/*.a
+#     do
+#         (cd $SIMULATOR_BUILDDIR/i386/obj; ar -x $f);
+# done
 
-echo "Linking each architecture into an uberlib (libros.a) ..."
+# echo "Linking each architecture into an uberlib (libros.a) ..."
 
-(cd $OS_BUILDDIR/armv7/; ar crus libros.a obj/*.o; )
-(cd $SIMULATOR_BUILDDIR/i386/; ar crus libros.a obj/*.o; )
+# (cd $OS_BUILDDIR/armv7/; ar crus libros.a obj/*.o; )
+# (cd $SIMULATOR_BUILDDIR/i386/; ar crus libros.a obj/*.o; )
 
 #===============================================================================
-cd $SRCDIR
 
-VERSION_TYPE=Alpha
-FRAMEWORK_NAME=ros
-FRAMEWORK_VERSION=A
+# -- for 32bit --
+ARCHS=("32bit"
+       "64bit")
+for ARCH in ${ARCHS[@]}
+do
+    cd $SRCDIR
 
-FRAMEWORK_CURRENT_VERSION=1.0
-FRAMEWORK_COMPATIBILITY_VERSION=1.0
+    VERSION_TYPE=Alpha
+    FRAMEWORK_NAME=ros
+    FRAMEWORK_VERSION=A
 
-FRAMEWORK_BUNDLE=$SRCDIR/$FRAMEWORK_NAME.framework
-echo "Framework: Building $FRAMEWORK_BUNDLE ..."
+    FRAMEWORK_CURRENT_VERSION=1.0
+    FRAMEWORK_COMPATIBILITY_VERSION=1.0
 
-[[ -d $FRAMEWORK_BUNDLE ]] && rm -rf $FRAMEWORK_BUNDLE
+    FRAMEWORK_BUNDLE=$SRCDIR/$ARCH/$FRAMEWORK_NAME.framework
+    echo "Framework: Building $FRAMEWORK_BUNDLE ..."
 
-echo "Framework: Setting up directories..."
-mkdir -p $FRAMEWORK_BUNDLE
-mkdir -p $FRAMEWORK_BUNDLE/Versions
-mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION
-mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/Resources
-mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/Headers
-mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/Documentation
+    [[ -d $FRAMEWORK_BUNDLE ]] && rm -rf $FRAMEWORK_BUNDLE
 
-echo "Framework: Creating symlinks..."
-ln -s $FRAMEWORK_VERSION               $FRAMEWORK_BUNDLE/Versions/Current
-ln -s Versions/Current/Headers         $FRAMEWORK_BUNDLE/Headers
-ln -s Versions/Current/Resources       $FRAMEWORK_BUNDLE/Resources
-ln -s Versions/Current/Documentation   $FRAMEWORK_BUNDLE/Documentation
-ln -s Versions/Current/$FRAMEWORK_NAME $FRAMEWORK_BUNDLE/$FRAMEWORK_NAME
+    echo "Framework: Setting up directories..."
+    mkdir -p $FRAMEWORK_BUNDLE
+    mkdir -p $FRAMEWORK_BUNDLE/Versions
+    mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION
+    mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/Resources
+    mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/Headers
+    mkdir -p $FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/Documentation
 
-FRAMEWORK_INSTALL_NAME=$FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/$FRAMEWORK_NAME
+    echo "Framework: Creating symlinks..."
+    ln -s $FRAMEWORK_VERSION               $FRAMEWORK_BUNDLE/Versions/Current
+    ln -s Versions/Current/Headers         $FRAMEWORK_BUNDLE/Headers
+    ln -s Versions/Current/Resources       $FRAMEWORK_BUNDLE/Resources
+    ln -s Versions/Current/Documentation   $FRAMEWORK_BUNDLE/Documentation
+    ln -s Versions/Current/$FRAMEWORK_NAME $FRAMEWORK_BUNDLE/$FRAMEWORK_NAME
 
-echo "Lipoing library into $FRAMEWORK_INSTALL_NAME..."
-lipo -create $OS_BUILDDIR/armv7/lib$FRAMEWORK_NAME.a $SIMULATOR_BUILDDIR/i386/lib$FRAMEWORK_NAME.a -o $FRAMEWORK_INSTALL_NAME
-#cp $OS_BUILDDIR/armv7/lib$FRAMEWORK_NAME.a $FRAMEWORK_INSTALL_NAME
+    FRAMEWORK_INSTALL_NAME=$FRAMEWORK_BUNDLE/Versions/$FRAMEWORK_VERSION/$FRAMEWORK_NAME
 
-echo "Framework: Copying includes..."
+    echo "Lipoing library into $FRAMEWORK_INSTALL_NAME..."
+    cp $SRCDIR/libros-$ARCH.a $FRAMEWORK_INSTALL_NAME
+    #lipo -create $OS_BUILDDIR/armv7/lib$FRAMEWORK_NAME.a $SIMULATOR_BUILDDIR/i386/lib$FRAMEWORK_NAME.a -o $FRAMEWORK_INSTALL_NAME
+    #cp $OS_BUILDDIR/armv7/lib$FRAMEWORK_NAME.a $FRAMEWORK_INSTALL_NAME
 
-# main packages
-for package in ${PACKAGES[@]}
+    echo "Framework: Copying includes..."
+
+    # main packages
+    for package in ${PACKAGES[@]}
     do
         cp -r $SRCDIR/$package/include/* $FRAMEWORK_BUNDLE/Headers
-done
-	
-mv $FRAMEWORK_BUNDLE/Headers/ros/*.h $FRAMEWORK_BUNDLE/Headers/
-rm -r $FRAMEWORK_BUNDLE/Headers/ros/
+    done
 
-# ros core messages
-mkdir $FRAMEWORK_BUNDLE/Headers/std_srvs
-find $SRCDIR/std_srvs -name \*.h -exec cp {} $FRAMEWORK_BUNDLE/Headers/std_srvs \;
-mkdir $FRAMEWORK_BUNDLE/Headers/roscpp
-find $SRCDIR/roscpp -name \*.h -exec cp {} $FRAMEWORK_BUNDLE/Headers/roscpp \;
+    mv $FRAMEWORK_BUNDLE/Headers/ros/*.h $FRAMEWORK_BUNDLE/Headers/
+    rm -r $FRAMEWORK_BUNDLE/Headers/ros/
 
-echo "Framework: Creating plist..."
+    # ros core messages
+    mkdir $FRAMEWORK_BUNDLE/Headers/std_srvs
+    find $SRCDIR/std_srvs -name \*.h -exec cp {} $FRAMEWORK_BUNDLE/Headers/std_srvs \;
+    mkdir $FRAMEWORK_BUNDLE/Headers/roscpp
+    find $SRCDIR/roscpp -name \*.h -exec cp {} $FRAMEWORK_BUNDLE/Headers/roscpp \;
 
-cat > $FRAMEWORK_BUNDLE/Resources/Info.plist <<EOF
+    echo "Framework: Creating plist..."
+
+    cat > $FRAMEWORK_BUNDLE/Resources/Info.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -302,5 +380,5 @@ cat > $FRAMEWORK_BUNDLE/Resources/Info.plist <<EOF
 </dict>
 </plist>
 EOF
-
+done
 echo "Done !"
