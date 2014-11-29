@@ -182,7 +182,7 @@ SIM_64BIT_DIR=`mktemp -d /tmp/sim64.XXXXXX`
 IOS_ARCH_NAMES="IOS_32BIT IOS_64BIT"
 for ARCH_NAME in ${IOS_ARCH_NAMES}; do
     ARCHS=`eval echo '$ARCHS_'$ARCH_NAME`
-    BUILDDIR=`eval echo $ARCH_NAME'_DIR'`
+    BUILDDIR=`eval echo '$'$ARCH_NAME'_DIR'`
     cd $BUILDDIR
     cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode $SRCDIR
     if (! xcodebuild -sdk iphoneos\
@@ -197,8 +197,10 @@ for ARCH_NAME in ${IOS_ARCH_NAMES}; do
     fi
 
     # divide into each archs
+    LIPOCMD="lipo "
     for ARCH in ${ARCHS}; do
         OBJDIR="$BUILDDIR/obj/$ARCH"
+        LIPOCMD="$LIPOCMD $OBJDIR/libros.a"
         mkdir -p $OBJDIR
         for f in $BUILDDIR/*.a; do
             lipo "$f" -thin $ARCH -o $OBJDIR/$(basename "$f")
@@ -208,8 +210,10 @@ for ARCH_NAME in ${IOS_ARCH_NAMES}; do
             (cd $OBJDIR; ar -x $f )
         done
         # archive all .o -> libros.a
-        (cd $BUILDDIR; ar crus libros.a $OBJDIR/*.o )
+        (cd $OBJDIR; ar crus libros.a $OBJDIR/*.o )
     done
+    # link all archs of libros.a -> libros.a
+    (cd $BUILDDIR; eval "$LIPOCMD -create -output libros.a")
 done
 
 # (cd $OS_BUILDDIR/armv7/; ar crus libros.a obj/*.o; )
@@ -220,9 +224,9 @@ done
 SIM_ARCH_NAMES="SIM_32BIT SIM_64BIT"
 for ARCH_NAME in ${SIM_ARCH_NAMES}; do
     ARCHS=`eval echo '$ARCHS_'$ARCH_NAME`
-    BUILDDIR=`eval echo $ARCH_NAME'_DIR'`
+    BUILDDIR=`eval echo '$'$ARCH_NAME'_DIR'`
     cd $BUILDDIR
-    cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -GXcode $SRCDIR
+    cmake -DCMAKE_TOOLCHAIN_FILE=./ios-cmake/toolchain/iOS.cmake -DIOS_PLATFORM=SIMULATOR -GXcode $SRCDIR
     if (! xcodebuild -sdk iphonesimulator\
           -configuration Release\
           -target ALL_BUILD\
@@ -235,8 +239,10 @@ for ARCH_NAME in ${SIM_ARCH_NAMES}; do
     fi
 
     # divide into each archs
+    LIPOCMD="lipo "
     for ARCH in ${ARCHS}; do
         OBJDIR="$BUILDDIR/obj/$ARCH"
+        LIPOCMD="$LIPOCMD $OBJDIR/libros.a"
         mkdir -p $OBJDIR
         for f in $BUILDDIR/*.a; do
             lipo "$f" -thin $ARCH -o $OBJDIR/$(basename "$f")
@@ -246,8 +252,10 @@ for ARCH_NAME in ${SIM_ARCH_NAMES}; do
             (cd $OBJDIR; ar -x $f)
         done
         # archive all .o -> libros.a
-        (cd $BUILDDIR; ar crus libros.a $OBJDIR/*.o )
+        (cd $OBJDIR; ar crus libros.a $OBJDIR/*.o )
     done
+    # link all archs of libros.a -> libros.a
+    (cd $BUILDDIR; eval "$LIPOCMD -create -output libros.a")
 done
 
 # -- make library
@@ -312,7 +320,7 @@ do
     FRAMEWORK_CURRENT_VERSION=1.0
     FRAMEWORK_COMPATIBILITY_VERSION=1.0
 
-    FRAMEWORK_BUNDLE=$SRCDIR/$ARCH/$FRAMEWORK_NAME.framework
+    FRAMEWORK_BUNDLE=$SRCDIR/frameworks/$ARCH/$FRAMEWORK_NAME.framework
     echo "Framework: Building $FRAMEWORK_BUNDLE ..."
 
     [[ -d $FRAMEWORK_BUNDLE ]] && rm -rf $FRAMEWORK_BUNDLE
