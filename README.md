@@ -1,7 +1,11 @@
-ros-ios
+jsk-ros-ios
 ===========
 
-## How to build
+This is the project of creating iOS applications that enable to work on ROS environment.
+
+The prebuilt frameworks are available on `binaries` directory. (currently supports all 64bit devices/simulators)
+
+## How to build frameworks
 
 1. build ros core for iOS
 
@@ -9,28 +13,17 @@ ros-ios
 sh build.sh
 ```
 
+All frameworks will be built on `ros/frameworks` directory.
+
 2. create your xcode project
 
 Open xcode, create your own project, then save it to this top directory.
 
-After creating the project named `hogeApp`, directory tree is like below:
+3. add ros related frameworks to your project
 
-```
-/path/to/ros-ios/
- |- new-app.sh
- |- hogeApp/
- |     |- hogeApp.xcodeproj
- |     ...
- |- ros/
-```
+This procedure can be done only in xcode.
 
-3. apply ros to your project
-
-```
-sh new-app.sh
-```
-
-4. Have a fun!
+4. Have fun!
 
 You can build your app at xcode.
 
