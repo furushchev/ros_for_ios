@@ -5,6 +5,10 @@ This is the project of creating iOS applications that enable to work on ROS envi
 
 The prebuilt frameworks are available on `binaries` directory. (currently supports all 64bit devices/simulators)
 
+**NOTE**
+
+Currently sample project (available on `xcode_project`) does not yet work.
+
 ## How to build frameworks
 
 1. build ros core for iOS
